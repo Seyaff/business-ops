@@ -6,6 +6,9 @@ The goal is not a workflow (code decides the steps). It's an agent with a
 mission that decides what to do, when to wake up, and what to remember,
 and only pings me on Telegram when it's done, stuck, or needs approval.
 
+**Start with [PLAN.md](PLAN.md)**: why workflows aren't enough, what real
+autonomy means, the target architecture, and the lesson-by-lesson build plan.
+
 ## Course roadmap
 
 Each lesson adds one pillar of autonomy to the same codebase.
