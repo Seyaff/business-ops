@@ -1,7 +1,9 @@
 # CLAUDE.md
 
 This repo is a **learning project**: the owner is learning to build truly
-autonomous agents by building one for their business. `PLAN.md` is the master
+autonomous agents by building one for their business. The target is a
+general-purpose operator ("Claude Code for the whole business"): it takes any
+outcome-level goal and works out how to achieve it. `PLAN.md` is the master
 plan. Read it before any work.
 
 ## How to work here
@@ -14,6 +16,9 @@ plan. Read it before any work.
 - **Never build a workflow.** No task logic in Python (no fixed steps, no
   `if/else` about what the agent should do). The model decides; code only
   sets limits (turns, budgets, timeouts, approvals, sandbox). See `PLAN.md` §6.
+- **Goal-agnostic code.** No business concept (lead, client, invoice, outreach)
+  in Python. If a goal seems to need task-specific code, give the agent a more
+  general capability instead.
 - **Safety lives in tool code**, not only in prompts.
 - Each lesson ends with: working code, passing tests, a write-up in
   `lessons/NN-name.md` (concept, code tour, exercises), and the README roadmap updated.

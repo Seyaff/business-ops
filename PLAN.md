@@ -106,22 +106,70 @@ It can take on almost any task because of four things:
 
 ## 3. What we're building
 
-**One agent with two missions**, reporting to you on Telegram.
+**A general-purpose autonomous operator: Claude Code for your whole business, not just code.**
 
-**Growth mission:** get restaurants onboarded to the product.
-Find leads → research each one → verify it's real → draft personal outreach →
-send it (with approval) → follow up on replies → learn which pitch works.
+It has no built-in job. "Growth" or "ops" aren't modes in the code; they're
+just goals you might give it. You hand it an **outcome** in plain words, and it
+works out everything else:
 
-**Ops mission:** keep the business healthy.
-Watch orders, KPIs and errors → spot something odd → investigate the cause →
-fix it if it's safe, otherwise report with evidence.
+> "This is my business. Onboard at least 10 paying clients in the next month."
 
-**What you experience:** you write `MISSION.md` once. Then you get messages like:
+> "Our cloud bill doubled. Find out why and cut it by 30% without breaking anything."
 
-> 📈 3 demos booked this week (Al Safadi, Zaatar w Zeit, Operation Falafel).
-> 🔴 Al Safadi wants 30% off. Our limit is 20%. **Approve? (yes/no)**
-> 🛠 Orders from tenant #12 dropped 60% since Tuesday. Their WhatsApp token
-> expired. I can't renew it; here's the link for you.
+> "Launch the product in Riyadh: research the market, adapt the pitch, get the first 3 customers."
+
+The **same code** runs all three. Nothing in Python knows what a "lead",
+"client" or "invoice" is. If a new goal needs new Python, we've built a
+workflow by accident.
+
+### What it does with "onboard 10 clients in a month"
+
+None of these steps are written anywhere in our code. The agent comes up
+with them, and a different goal would produce a completely different plan.
+
+1. **Understands the business.** Reads your repo, docs, website and pricing,
+   and writes down what the product is, who it's for and why they'd buy.
+2. **Asks you once.** It sends one batch of questions it can't answer
+   alone: "Which cities? Max discount? Can I send WhatsApp messages from
+   your number? Who runs demos?" Then it works without you.
+3. **Makes a plan with milestones.** "10 clients by Nov 4 → about 40 demos →
+   about 400 contacted → leads ready by day 5." It saves the plan to `GOAL.md`.
+4. **Builds what it needs.** Writes a scraper, sets up a lead sheet, drafts
+   pitch variants, and saves the useful scripts for later.
+5. **Executes over weeks.** Sends outreach (approved by you at first),
+   follows up, books demos into your calendar, and sends onboarding steps to people who say yes.
+6. **Measures and re-plans.** "Reply rate 2% on email, 11% on WhatsApp →
+   switch channels." "Behind schedule on day 12 → widen to 2 more cities."
+7. **Hands you only what only you can do:** take the demo call, sign the
+   contract, approve the 25% discount.
+8. **Reports and closes out:** "10/10 onboarded. Here's what worked, the
+   playbook I wrote, and 3 warm leads for next month."
+
+### What "can take over everything" really requires
+
+Autonomy isn't magic, and an agent can only act through what it can reach.
+These four things set its limits:
+
+| Need | Why | How it gets it |
+|---|---|---|
+| **Capabilities** | It can't email someone without an email account | General tools (bash, web, browser, files) plus connectors (email, WhatsApp, calendar, your DB). It can **ask you for access** when it finds a gap |
+| **Judgement** | Choosing what matters among a thousand possible actions | The model (that's what it's for), plus mission, memory and measuring progress |
+| **Time** | A month-long goal can't fit in one run | Heartbeat plus memory: hundreds of short runs that act like one long one |
+| **Trust** | You won't let it spend money or speak for you blindly at first | Risk tiers, budgets, sandbox. Widen its permissions as it earns trust |
+
+**Real autonomy doesn't mean the human does nothing. It means the human does
+only what only a human can do.**
+
+### What you experience
+
+You write one goal. Then, over the month, Telegram messages like:
+
+> 🎯 Plan ready: 10 clients by Nov 4. Starting with Dubai cloud kitchens (details in GOAL.md).
+> ❓ 4 quick questions before I start (one message, answer when you can).
+> 🔴 First outreach batch (20 messages) drafted. **Approve? (yes/no)**
+> 📈 Week 2: 4 onboarded, 9 demos booked. WhatsApp beats email 5×, so I switched.
+> 🗓 Demo with Al Safadi tomorrow 3pm. Brief: they use Talabat, pain point is commissions.
+> ✅ Goal reached: 11/10. Report and playbook in agent_home/reports/.
 
 ### Architecture
 
@@ -136,15 +184,16 @@ fix it if it's safe, otherwise report with evidence.
                                  │ loads
         ┌────────────────────────┼─────────────────────────┐
         ▼                        ▼                         ▼
-  agent_home/MISSION.md   MEMORY.md, TASKS.md        JOURNAL/ (last runs)
-  (you write)             (agent writes)              skills/ (its scripts)
+  agent_home/MISSION.md   GOAL.md, MEMORY.md,        JOURNAL/ (last runs)
+  (you write)             TASKS.md (agent writes)     skills/ (its scripts)
                                  │
                                  ▼
                     THE LOOP (Lesson 1, unchanged)
                  model decides → tools act → results back
                                  │
-     tools: bash (sandboxed) · web · files · send_message · notify_human
-            schedule_next_run · remember · request_approval
+     tools: bash (sandboxed) · web · browser · files · connectors (MCP)
+            notify_human · request_approval · request_capability
+            schedule_next_run · remember · delegate (sub-agents)
                                  │
                     limits enforced in CODE, not prompt:
           turn cap · $/day budget · timeouts · red-tier gate · sandbox
@@ -168,8 +217,12 @@ business-ops/
     heartbeat.py     # scheduler + wake_up (Lesson 3)
     approvals.py     # risk tiers, Telegram in (Lesson 4)
     budget.py        # spend tracking (Lesson 5)
+    goals.py         # GOAL.md, milestones, kickoff (Lesson 6)
+    capabilities/    # web, browser, MCP connectors, secrets (Lesson 7)
+    subagents.py     # delegate() (Lesson 8)
   agent_home/        # the agent's brain on disk (gitignored except templates)
-    MISSION.md
+    MISSION.md       # who the business is, limits, budget (you write)
+    GOAL.md          # current outcome, plan, milestones (agent writes)
     MEMORY.md
     TASKS.md
     JOURNAL/
@@ -229,41 +282,65 @@ one real run, a written lesson.** Don't start the next lesson until the
   any command can be wrong and make sure it can't do damage.
 - **Done when:** `rm -rf /` inside the agent harms nothing, and a $0.50 daily cap actually stops it.
 
-### Lesson 6: Mission: growth
-- **Build:** tools `web_search`, `fetch_page`, `save_lead`, `send_outreach` (red tier
-  at first); `MISSION.md` for growth. **No pipeline code.** The agent decides
-  how to find, verify and prioritise leads.
-- **Concept:** a goal instead of steps. Compare its output with `lead_generator.py`.
-- **Done when:** over a few days it builds a verified lead list, drafts outreach
-  you approve, and `MEMORY.md` shows what it learned about which leads are good.
-- **Watch out for:** **prompt injection.** Web pages can contain text like
-  "ignore your instructions and…". Fetched content is data, never
-  instructions; put this in the system prompt **and** keep red-tier gates on anything outbound.
+### Lesson 6: Long-horizon goals (plan, measure, re-plan)
+- **Build:** `agent_home/GOAL.md`, written by the agent: the outcome, a deadline,
+  measurable milestones, the current plan and a progress log. A **kickoff
+  run** when a new goal arrives: study the business, send the owner one batch
+  of questions, write the plan. Every later run starts with "where am I versus the milestones?"
+- **Concept:** a month-long outcome is hundreds of short runs. What keeps them
+  pointed the same way is a plan the agent owns, measures and rewrites. It's
+  still not a workflow: the plan is data the model writes, not code we write.
+- **Done when:** given "get 10 clients in a month" (on a test business), it
+  produces a sensible plan with numbers, and after fake progress data shows
+  it's behind, it changes the plan on its own.
 
-### Lesson 7: Mission: ops
-- **Build:** read-only tools for your business data (orders, KPIs, logs) via
-  your API or DB; ops section in `MISSION.md`; "anomaly → investigate → report or fix" left entirely to the agent.
-- **Concept:** one agent, two missions. It prioritises between them itself.
-- **Done when:** you inject a fake problem (e.g. a tenant's orders drop to zero)
-  and it finds it, finds the cause, and messages you with evidence.
+### Lesson 7: Capabilities (reaching the real world)
+- **Build:** a generic capability layer, not task tools: `web_search`,
+  `fetch_page`, a headless **browser**, sending email/WhatsApp, calendar, and
+  read access to your business DB/API, ideally as **MCP connectors** so new
+  ones plug in without changing the loop. A secrets store, so the agent uses
+  credentials without ever seeing them. A `request_capability(what, why)`
+  tool, so the agent asks you when it needs a new kind of access.
+- **Concept:** what an agent can achieve is limited by what it can reach.
+  General tools plus "ask for access" means it's never stuck at "no tool for that".
+- **Done when:** it does a task needing three different capabilities it was never
+  told to combine (e.g. find a business's owner on the web, check your DB for
+  them, draft a WhatsApp message), and asks you for a capability it doesn't have.
+- **Watch out for:** **prompt injection.** Web pages and incoming messages can
+  contain "ignore your instructions and…". Treat fetched content as data, never as
+  instructions; say so in the system prompt **and** keep red-tier gates on everything outbound.
 
-### Lesson 8: Self-made skills
-- **Build:** the agent saves useful scripts to `agent_home/skills/` with a
-  one-line description; their index is loaded into every run; it reuses and improves them.
-- **Concept:** this is how it handles tasks you never planned for, by
-  building and keeping its own tools.
-- **Done when:** a skill written in one run gets reused in a later run without you asking.
+### Lesson 8: Skills & sub-agents (scaling itself)
+- **Build:** (a) **skills:** the agent saves reusable scripts and playbooks to
+  `agent_home/skills/` with a one-line description; the index is loaded every
+  run. (b) **sub-agents:** a `delegate(task)` tool that runs a fresh loop with
+  its own clean context and returns only the result (e.g. "research these 30
+  restaurants" runs as 30 small jobs, not one huge context).
+- **Concept:** this is how one agent handles large, varied work. It builds its
+  own tools and splits big jobs the way Claude Code does.
+- **Done when:** a skill written in one run is reused later without asking, and
+  a 30-item research task finishes through sub-agents without blowing the main context.
 
 ### Lesson 9: Run it 24/7
-- **Build:** deploy (a small VPS or Render worker), process supervision, a
-  daily summary to Telegram, a `/pause` command, alerts if it stops running.
-- **Concept:** operations for agents: observability, kill switch, cost review.
+- **Build:** deploy (a small VPS or Render worker), process supervision, a daily
+  summary to Telegram, `/pause` and `/status` commands, an alert if it stops running.
+- **Concept:** operations for agents: observability, a kill switch, cost review.
 - **Done when:** it has run for a week without you touching the server.
+
+### Lesson 10: Capstone: give it a real goal and step back
+- **Do:** write the real goal: *"Onboard at least 10 clients in the next month."*
+  Give it the access it asks for. Then only answer its questions and approvals.
+- **Then prove it's general:** give it a **completely different** goal (e.g.
+  "cut our monthly costs 20%") **without changing any code**. If you have to
+  write Python to make the second goal work, find the workflow that slipped in and remove it.
+- **Done when:** the month is over and you can say, with its report in hand,
+  what it achieved, where it needed you, and which permissions you'd widen next.
 
 ### Later (optional): Claude Agent SDK
 Once you understand every piece because you built it, compare it with the
 **Claude Agent SDK** (Claude Code as a library: loop, tools, context
-management and sub-agents built in). You'll know exactly what it does for you.
+management and sub-agents built in). You'll know exactly what it does for you,
+and whether to swap our loop for it.
 
 ---
 
@@ -278,7 +355,12 @@ management and sub-agents built in). You'll know exactly what it does for you.
 | **Runaway cost** | One bad loop costs $50 | Per-run and per-day budgets in code (L5) |
 | **Dangerous actions** | Sends a wrong price to 100 restaurants | Red tier, approval token checked in the tool (L4) |
 | **Damage to the machine** | A bad `bash` command | Docker sandbox (L5) |
-| **Prompt injection** | A web page tells the agent what to do | Fetched content is data; outbound actions gated (L6) |
+| **Prompt injection** | A web page tells the agent what to do | Fetched content is data; outbound actions gated (L7) |
+| **Vague goal** | "Grow the business" → it can't tell if it's winning | Kickoff turns it into a measurable outcome with a deadline, confirmed by you (L6) |
+| **Losing the thread over weeks** | Day 20's run doesn't know day 3's plan | `GOAL.md` with milestones, read every run (L6) |
+| **Missing capability** | Goal needs email/calendar it can't reach | Generic tools plus `request_capability`: it asks instead of giving up (L7) |
+| **Too much for one context** | Researching 200 leads overflows the context | Sub-agents with clean contexts (L8) |
+| **Workflow creeping back in** | Python starts to know about "leads" | Capstone test: a second, different goal must work with zero code changes (L10) |
 | **Context overflow** | Long runs exceed the context window | Truncated tool output (L1), journal + memory instead of long history (L2), compaction later |
 | **Silent failure** | It stops and you never know | Guaranteed final notification (L1), "agent is down" alert (L9) |
 | **Can't explain itself** | "Why did it do that?" | Run log of every action, plus a journal with reasons (L2, L5) |
@@ -289,13 +371,15 @@ management and sub-agents built in). You'll know exactly what it does for you.
 
 1. **The model decides, code limits.** No task logic in Python. If you're
    writing `if lead.score > 7: send()`, stop: that's a workflow.
-2. **General tools first.** Add a dedicated tool only when it's safer
+2. **Goal-agnostic code.** No business concept (lead, client, invoice) appears
+   in Python. Those live in `MISSION.md`, `GOAL.md` and the agent's own skills.
+3. **General tools first.** Add a dedicated tool only when it's safer
    (approvals), cheaper or far more reliable than bash.
-3. **Safety in tool code, never only in the prompt.**
-4. **Every run ends visibly:** journal entry, memory update, next run
+4. **Safety in tool code, never only in the prompt.**
+5. **Every run ends visibly:** journal entry, memory update, next run
    scheduled, and the owner notified if anything matters.
-5. **Tests use the fake model.** No API key needed; a real run per lesson to confirm.
-6. **One lesson at a time.** Each lesson leaves a working agent.
+6. **Tests use the fake model.** No API key needed; a real run per lesson to confirm.
+7. **One lesson at a time.** Each lesson leaves a working agent.
 
 ---
 

@@ -2,9 +2,13 @@
 
 Learning to build **autonomous agents** by building one for my business.
 
-The goal is not a workflow (code decides the steps). It's an agent with a
-mission that decides what to do, when to wake up, and what to remember,
-and only pings me on Telegram when it's done, stuck, or needs approval.
+Think Claude Code, but for the whole business instead of just code. I give it
+an outcome ("onboard 10 clients next month") and it works out the plan,
+builds what it needs, does the work over weeks, and only pings me on Telegram
+for decisions, approvals and things only a human can do.
+
+Not a workflow: nothing in the code knows about leads, clients or invoices.
+The same code runs any goal.
 
 **Start with [PLAN.md](PLAN.md)**: why workflows aren't enough, what real
 autonomy means, the target architecture, and the lesson-by-lesson build plan.
@@ -20,10 +24,11 @@ Each lesson adds one pillar of autonomy to the same codebase.
 | 3 | Heartbeat | The agent schedules its own next run, and events wake it | ⏳ |
 | 4 | Risk tiers & approvals | Red actions wait for your "yes" on Telegram | ⏳ |
 | 5 | Sandbox & budgets | Docker, cost caps, limits enforced in code | ⏳ |
-| 6 | Mission: growth | Finds restaurant leads, researches them, drafts outreach | ⏳ |
-| 7 | Mission: ops | Watches business data, spots problems, investigates | ⏳ |
-| 8 | Self-made skills | The agent writes scripts and reuses them | ⏳ |
-| 9 | Run it 24/7 | Deploy and leave it running | ⏳ |
+| 6 | Long-horizon goals | Plans, milestones, measures and re-plans over weeks | ⏳ |
+| 7 | Capabilities | Web, browser, email/WhatsApp, calendar, MCP connectors; asks you for access | ⏳ |
+| 8 | Skills & sub-agents | Writes its own tools, splits big jobs | ⏳ |
+| 9 | Run it 24/7 | Deploy, kill switch, daily summary | ⏳ |
+| 10 | Capstone | "Onboard 10 clients next month", then a totally different goal with zero code changes | ⏳ |
 
 ## Setup
 
